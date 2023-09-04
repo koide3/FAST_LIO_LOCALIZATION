@@ -1,9 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # coding=utf8
 from __future__ import print_function, division, absolute_import
 
 import copy
-import thread
 import time
 
 import open3d as o3d
@@ -198,7 +197,7 @@ def cb_save_cur_scan(pc_msg):
     cur_scan.points = o3d.utility.Vector3dVector(pc[:, :3])
 
 
-def thread_localization():
+def thread_localization(event):
     global T_map_to_odom
     while True:
         # 每隔一段时间进行全局定位
@@ -255,6 +254,7 @@ if __name__ == '__main__':
     rospy.loginfo('Initialize successfully!!!!!!')
     rospy.loginfo('')
     # 开始定期全局定位
-    thread.start_new_thread(thread_localization, ())
+    
+    timer = rospy.Timer(rospy.Duration(0.1), thread_localization)
 
     rospy.spin()

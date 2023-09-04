@@ -1,9 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # coding=utf8
 from __future__ import print_function, division, absolute_import
 
 import copy
-import thread
 import time
 
 import numpy as np
@@ -24,7 +23,7 @@ def pose_to_mat(pose_msg):
     )
 
 
-def transform_fusion():
+def transform_fusion(event):
     global cur_odom_to_baselink, cur_map_to_odom
 
     br = tf.TransformBroadcaster()
@@ -83,6 +82,6 @@ if __name__ == '__main__':
     pub_localization = rospy.Publisher('/localization', Odometry, queue_size=1)
 
     # 发布定位消息
-    thread.start_new_thread(transform_fusion, ())
+    timer = rospy.Timer(rospy.Duration(0.1), transform_fusion)
 
     rospy.spin()
