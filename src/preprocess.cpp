@@ -50,6 +50,10 @@ void Preprocess::process(const sensor_msgs::PointCloud2::ConstPtr &msg, PointClo
 {
   switch (lidar_type)
   {
+  case GENERIC:
+    generic_handler(msg);
+    break;
+
   case OUST64:
     oust64_handler(msg);
     break;
@@ -262,6 +266,53 @@ void Preprocess::oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
       pl_surf.points.push_back(added_pt);
     }
   }
+  // pub_func(pl_surf, pub_full, msg->header.stamp);
+  // pub_func(pl_surf, pub_corn, msg->header.stamp);
+}
+
+void Preprocess::generic_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
+{
+  pl_surf.clear();
+  pl_corn.clear();
+  pl_full.clear();
+  pcl::PointCloud<pcl::PointXYZ> pl_orig;
+  pcl::fromROSMsg(*msg, pl_orig);
+  int plsize = pl_orig.size();
+  pl_corn.reserve(plsize);
+  pl_surf.reserve(plsize);
+  if (feature_enabled)
+  {
+    printf("Feature detection must be disabled!!");
+    abort();
+  }
+  else
+  {
+    double time_stamp = msg->header.stamp.toSec();
+    // cout << "===================================" << endl;
+    // printf("Pt size = %d, N_SCANS = %d\r\n", plsize, N_SCANS);
+    for (int i = 0; i < pl_orig.points.size(); i++)
+    {
+      if (i % point_filter_num != 0) continue;
+
+      double range = pl_orig.points[i].x * pl_orig.points[i].x + pl_orig.points[i].y * pl_orig.points[i].y + pl_orig.points[i].z * pl_orig.points[i].z;
+      
+      if (range < blind) continue;
+      
+      Eigen::Vector3d pt_vec;
+      PointType added_pt;
+      added_pt.x = pl_orig.points[i].x;
+      added_pt.y = pl_orig.points[i].y;
+      added_pt.z = pl_orig.points[i].z;
+      added_pt.intensity = 0;
+      added_pt.normal_x = 0;
+      added_pt.normal_y = 0;
+      added_pt.normal_z = 0;
+      added_pt.curvature = 0;
+
+      pl_surf.points.push_back(added_pt);
+    }
+  }
+
   // pub_func(pl_surf, pub_full, msg->header.stamp);
   // pub_func(pl_surf, pub_corn, msg->header.stamp);
 }

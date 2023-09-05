@@ -337,6 +337,21 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in)
     // cout<<"IMU got at: "<<msg_in->header.stamp.toSec()<<endl;
     sensor_msgs::Imu::Ptr msg(new sensor_msgs::Imu(*msg_in));
 
+    Eigen::Matrix3d R_lidar_imu = Eigen::Quaterniond(0.525, -0.476, 0.474, 0.524).toRotationMatrix();
+
+    const auto& a = msg->linear_acceleration;
+    const auto& w = msg->angular_velocity;
+
+    Eigen::Vector3d a_ = R_lidar_imu * Eigen::Vector3d(a.x, a.y, a.z);
+    Eigen::Vector3d w_ = R_lidar_imu * Eigen::Vector3d(w.x, w.y, w.z);
+
+    msg->linear_acceleration.x = a_.x();
+    msg->linear_acceleration.y = a_.y();
+    msg->linear_acceleration.z = a_.z();
+    msg->angular_velocity.x = w_.x();
+    msg->angular_velocity.y = w_.y();
+    msg->angular_velocity.z = w_.z();
+
     if (abs(timediff_lidar_wrt_imu) > 0.1 && time_sync_en)
     {
         msg->header.stamp = \

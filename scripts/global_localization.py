@@ -38,7 +38,17 @@ def msg_to_array(pc_msg):
     return pc
 
 
+is_first = True
+
 def registration_at_scale(pc_scan, pc_map, initial, scale):
+    global is_first
+    
+    if is_first:
+      print('saved')
+      o3d.io.write_point_cloud('/datasets/map.pcd', voxel_down_sample(pc_map, MAP_VOXEL_SIZE * scale))
+      o3d.io.write_point_cloud('/datasets/scan.pcd', voxel_down_sample(pc_scan, SCAN_VOXEL_SIZE * scale))
+      is_first = False
+  
     result_icp = o3d.registration.registration_icp(
         voxel_down_sample(pc_scan, SCAN_VOXEL_SIZE * scale), voxel_down_sample(pc_map, MAP_VOXEL_SIZE * scale),
         1.0 * scale, initial,
@@ -76,6 +86,7 @@ def publish_point_cloud(publisher, header, pc):
 
 
 def crop_global_map_in_FOV(global_map, pose_estimation, cur_odom):
+    return global_map
     # 当前scan原点的位姿
     T_odom_to_base_link = pose_to_mat(cur_odom)
     T_map_to_base_link = np.matmul(pose_estimation, T_odom_to_base_link)
@@ -126,10 +137,10 @@ def global_localization(pose_estimation):
     global_map_in_FOV = crop_global_map_in_FOV(global_map, pose_estimation, cur_odom)
 
     # 粗配准
-    transformation, _ = registration_at_scale(scan_tobe_mapped, global_map_in_FOV, initial=pose_estimation, scale=5)
+    # transformation, _ = registration_at_scale(scan_tobe_mapped, global_map_in_FOV, initial=pose_estimation, scale=5)
 
     # 精配准
-    transformation, fitness = registration_at_scale(scan_tobe_mapped, global_map_in_FOV, initial=transformation,
+    transformation, fitness = registration_at_scale(scan_tobe_mapped, global_map_in_FOV, initial=pose_estimation,
                                                     scale=1)
     toc = time.time()
     rospy.loginfo('Time: {}'.format(toc - tic))
@@ -148,6 +159,8 @@ def global_localization(pose_estimation):
         map_to_odom.header.stamp = cur_odom.header.stamp
         map_to_odom.header.frame_id = 'map'
         pub_map_to_odom.publish(map_to_odom)
+        rospy.logwarn('{}'.format(transformation))
+        rospy.logwarn('fitness score:{}'.format(fitness))
         return True
     else:
         rospy.logwarn('Not match!!!!')
@@ -207,18 +220,18 @@ def thread_localization(event):
 
 
 if __name__ == '__main__':
-    MAP_VOXEL_SIZE = 0.4
-    SCAN_VOXEL_SIZE = 0.1
+    MAP_VOXEL_SIZE = 0.05
+    SCAN_VOXEL_SIZE = 0.05
 
     # Global localization frequency (HZ)
     FREQ_LOCALIZATION = 0.5
 
     # The threshold of global localization,
     # only those scan2map-matching with higher fitness than LOCALIZATION_TH will be taken
-    LOCALIZATION_TH = 0.95
+    LOCALIZATION_TH = 0.9
 
     # FOV(rad), modify this according to your LiDAR type
-    FOV = 1.6
+    FOV = 3.0
 
     # The farthest distance(meters) within FOV
     FOV_FAR = 150
@@ -243,8 +256,17 @@ if __name__ == '__main__':
         rospy.logwarn('Waiting for initial pose....')
 
         # 等待初始位姿
-        pose_msg = rospy.wait_for_message('/initialpose', PoseWithCovarianceStamped)
-        initial_pose = pose_to_mat(pose_msg)
+        # pose_msg = rospy.wait_for_message('/initialpose', PoseWithCovarianceStamped)
+        # initial_pose = pose_to_mat(pose_msg)
+        
+        initial_pose = np.float64([[0.03580, -0.14468, 0.98883, -25.92989], [0.99936, 0.00313, -0.03572, 3.74762], [0.00207, 0.98947, 0.14470, -0.46829], [0.00000, 0.00000, 0.00000, 1.00000]])
+
+        initial_pose = np.float64([0.052244, -0.186395, 0.981085, -25.906187, 0.998496, -0.006584, -0.054422, 3.724276, 0.016603, 0.982453, 0.185771, -0.472339, 0.000000, 0.000000, 0.000000, 1.000000]).reshape(4, 4)
+
+        initial_pose = np.float64([0.112671, -0.143484, 0.983218, -25.915653, -0.993572, -0.027156, 0.109895, 3.277255, 0.010932, -0.989281, -0.145621, -0.405297, 0.000000, 0.000000, 0.000000, 1.000000]).reshape(4, 4)
+
+        print(initial_pose)
+        
         if cur_scan:
             initialized = global_localization(initial_pose)
         else:
@@ -255,6 +277,6 @@ if __name__ == '__main__':
     rospy.loginfo('')
     # 开始定期全局定位
     
-    timer = rospy.Timer(rospy.Duration(0.1), thread_localization)
+    timer = rospy.Timer(rospy.Duration(0.01), thread_localization)
 
     rospy.spin()

@@ -1,0 +1,28 @@
+common:
+    lid_topic:  "/points2/decompressed"
+    imu_topic:  "/imu"
+    time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
+
+preprocess:
+    lidar_type: 4                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 4 for generic range sensors
+    scan_line: 6
+    blind: 0.1
+
+mapping:
+    acc_cov: 0.1
+    gyr_cov: 0.1
+    b_acc_cov: 0.0001
+    b_gyr_cov: 0.0001
+    fov_degree:    120
+    det_range:     450.0
+    # extrinsic_T: [-0.00320, -0.05292, 0.00108]
+    # extrinsic_R: [-0.00763, -0.99984, 0.01628, 0.99857, -0.00676, 0.05310, -0.05298, 0.01666, 0.99846]
+    # extrinsic_T: [-0.05115, 0.00285, 0.00106]
+    # extrinsic_R: [0.00294, -0.99510, -0.09881, -0.99999, -0.00304, 0.00085, -0.00115, 0.09881, -0.99510]
+    extrinsic_T: [0.0, 0.0, 0.0]
+    extrinsic_R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+
+publish:     
+    scan_publish_en:  1       # 'false' will close all the point cloud output
+    dense_publish_en: 1       # false will low down the points number in a global-frame point clouds scan.
+    scan_bodyframe_pub_en: 1  # output the point cloud scans in IMU-body-frame
